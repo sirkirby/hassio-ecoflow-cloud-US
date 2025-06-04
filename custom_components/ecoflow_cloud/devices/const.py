@@ -79,6 +79,14 @@ DC_TIMEOUT_OPTIONS_LIMITED = {
     "24 hr": 1440,
 }
 
+TRANSFER_TIME_OPTIONS = {
+    "10ms": 10,
+    "20ms": 20,
+    "30ms": 30,
+    "40ms": 40,
+    "50ms": 50,
+}
+
 DC_CHARGE_CURRENT_OPTIONS = {
     "4A": 4000,
     "6A": 6000,
