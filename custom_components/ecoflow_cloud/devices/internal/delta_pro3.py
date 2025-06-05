@@ -45,16 +45,24 @@ class DeltaPro3(BaseDevice):
             InMilliVoltSensorEntity(client, self, "inv.acInVol", const.AC_IN_VOLT),
             OutMilliVoltSensorEntity(client, self, "inv.invOutVol", const.AC_OUT_VOLT),
 
-            # Solar Input
-            InWattsSolarSensorEntity(client, self, "mppt.inWatts", const.SOLAR_IN_POWER),
-            InVoltSolarSensorEntity(client, self, "mppt.inVol", const.SOLAR_IN_VOLTAGE),
-            InAmpSolarSensorEntity(client, self, "mppt.inAmp", const.SOLAR_IN_CURRENT),
+            # Solar Input - Primary (LV Port)
+            InWattsSolarSensorEntity(client, self, "mppt.lvInWatts", const.SOLAR_IN_POWER),
+            InVoltSolarSensorEntity(client, self, "mppt.lvInVol", const.SOLAR_IN_VOLTAGE),
+            InAmpSolarSensorEntity(client, self, "mppt.lvInAmp", const.SOLAR_IN_CURRENT),
+            
+            # Solar Input - Secondary (HV Port) - New for Delta Pro 3
+            InWattsSolarSensorEntity(client, self, "mppt.hvInWatts", const.SOLAR_2_IN_POWER),
+            InVoltSolarSensorEntity(client, self, "mppt.hvInVol", const.SOLAR_2_IN_VOLTS),
+            InAmpSolarSensorEntity(client, self, "mppt.hvInAmp", const.SOLAR_2_IN_AMPS),
 
             # DC Output
             OutWattsDcSensorEntity(client, self, "mppt.outWatts", const.DC_OUT_POWER),
             OutVoltDcSensorEntity(client, self, "mppt.outVol", const.DC_OUT_VOLTAGE),
             OutWattsSensorEntity(client, self, "mppt.carOutWatts", const.DC_CAR_OUT_POWER),
             OutWattsSensorEntity(client, self, "mppt.dcdc12vWatts", const.DC_ANDERSON_OUT_POWER),
+            
+            # Smart Home Panel Output - New for Delta Pro 3
+            OutWattsSensorEntity(client, self, "mppt.smartPanelWatts", "Smart Home Panel Out Power", False),
 
             # USB & Type-C Output
             OutWattsSensorEntity(client, self, "pd.typec1Watts", const.TYPEC_1_OUT_POWER),
@@ -137,7 +145,7 @@ class DeltaPro3(BaseDevice):
             WattsSensorEntity(client, self, "bmsSlave2.outputWatts", const.SLAVE_N_OUT_POWER % 2, False, True),
             CyclesSensorEntity(client, self, "bmsSlave1.cycles", const.SLAVE_N_CYCLES % 1, False),
             CyclesSensorEntity(client, self, "bmsSlave2.cycles", const.SLAVE_N_CYCLES % 2, False),
-            QuotaStatusSensorEntity(client, self)
+            QuotaStatusSensorEntity(client, self),
         ]
 
     def numbers(self, client: EcoflowApiClient) -> list[BaseNumberEntity]:
@@ -217,7 +225,7 @@ class DeltaPro3(BaseDevice):
         from homeassistant.util import utcnow
         _LOGGER = logging.getLogger(__name__)
         
-        raw = {"params": {}}
+        data = {"params": {}}
         from .proto import ecopacket_pb2 as ecopacket, delta_pro3_pb2 as delta_pro3
 
         try:
@@ -246,102 +254,182 @@ class DeltaPro3(BaseDevice):
                             status = delta_pro3.DeltaPro3Status()
                             status.ParseFromString(pdata)
                             
-                            # Extract fields with proper mapping to sensor names
+                            # Restore basic field mapping with corrected scaling factors
+                            # IMPORTANT: Exclude solar fields that would conflict with manual injection
                             field_mapping = {
+                                # Battery Master fields
                                 'soc': 'bmsMaster.soc',
                                 'voltage': 'bmsMaster.vol', 
                                 'current': 'bmsMaster.amp',
                                 'temp': 'bmsMaster.temp',
                                 'cycles': 'bmsMaster.cycles',
-                                'input_watts': 'pd.wattsInSum',
-                                'output_watts': 'pd.wattsOutSum',
-                                'ac_in_vol': 'inv.acInVol',
-                                'ac_out_vol': 'inv.invOutVol',
-                                'ac_in_watts': 'inv.inputWatts',
-                                'ac_out_watts': 'inv.outputWatts',
-                                'solar_in_watts': 'mppt.inWatts',
-                                'solar_in_vol': 'mppt.inVol',
-                                'solar_in_cur': 'mppt.inAmp',
-                                'dc_out_watts': 'mppt.outWatts',
-                                'car_out_watts': 'mppt.carOutWatts',
-                                'anderson_watts': 'mppt.dcdc12vWatts',
-                                'usb1_watts': 'pd.usb1Watts',
-                                'usb2_watts': 'pd.usb2Watts',
-                                'typec1_watts': 'pd.typec1Watts',
-                                'typec2_watts': 'pd.typec2Watts',
-                                'charge_time': 'ems.chgRemainTime',
-                                'discharge_time': 'ems.dsgRemainTime',
                                 'remain_cap': 'bmsMaster.remainCap',
                                 'full_cap': 'bmsMaster.fullCap',
                                 'design_cap': 'bmsMaster.designCap',
                                 'soh': 'bmsMaster.soh',
-                                'min_cell_vol': 'bmsMaster.minCellVol',
-                                'max_cell_vol': 'bmsMaster.maxCellVol',
-                                'min_cell_temp': 'bmsMaster.minCellTemp',
-                                'max_cell_temp': 'bmsMaster.maxCellTemp',
-                                'ac_enabled': 'inv.cfgAcEnabled',
-                                'dc_enabled': 'mppt.carState',
-                                'beeper_enabled': 'pd.beepState',
-                                'error_code': 'error_code',
-                                'warning_code': 'warning_code'
+                                
+                                # Power fields with corrected scaling
+                                'input_watts': 'pd.wattsInSum',
+                                'output_watts': 'pd.wattsOutSum',
+                                'ac_in_watts': 'inv.inputWatts',
+                                'ac_out_watts': 'inv.outputWatts',
+                                
+                                # USB/Type-C Output
+                                'usb1_watts': 'pd.usb1Watts',
+                                'usb2_watts': 'pd.usb2Watts',
+                                'typec1_watts': 'pd.typec1Watts',
+                                'typec2_watts': 'pd.typec2Watts',
+                                'qc_usb1_watts': 'pd.qcUsb1Watts',
+                                'qc_usb2_watts': 'pd.qcUsb2Watts',
+                                
+                                # DC Output
+                                'dc_out_watts': 'mppt.outWatts',
+                                'car_out_watts': 'mppt.carOutWatts',
+                                'anderson_watts': 'mppt.dcdc12vWatts',
+                                
+                                # AC Voltage
+                                'ac_in_vol': 'inv.acInVol',
+                                'ac_out_vol': 'inv.invOutVol',
+                                
+                                # Time fields
+                                'charge_time': 'ems.chgRemainTime',
+                                'discharge_time': 'ems.dsgRemainTime',
+                                
+                                # Combined battery
+                                'combined_soc': 'ems.lcdShowSoc',
+                                'combined_soc_f32': 'ems.f32LcdShowSoc',
+
+                                # Energy counters (Wh)
+                                'solar_in_energy':      'pd.chgSunPower',
+                                'charge_ac_energy':     'pd.chgPowerAc',
+                                'charge_dc_energy':     'pd.chgPowerDc',
+                                'discharge_ac_energy':  'pd.dsgPowerAc',
+                                'discharge_dc_energy':  'pd.dsgPowerDc',
+                                
+                                # NOTE: Excluded solar fields to prevent conflicts with manual extraction:
+                                # 'solar_in_watts': would create duplicate sensors
+                                # 'solar_in_vol': would create duplicate sensors  
+                                # 'solar_in_cur': would create duplicate sensors
+                                # 'solar_lv_watts': additional LV power field that would create duplicates
+                                # 'solar_lv_cur': additional LV current field that would create duplicates
+                                # 'solar_hv_watts_raw': raw HV field used in manual extraction
+                                # 'solar_lv_watts_raw': raw LV field  
+                                # 'solar_lv_watts_raw2': raw LV field 2 used in manual extraction
                             }
-                            
-                            # Extract all available fields safely
-                            parsed_fields = 0
-                            _LOGGER.info("Delta Pro 3 cmd_id 50: Starting field extraction debug...")
-                            
-                            for descriptor in status.DESCRIPTOR.fields:
-                                try:
-                                    # Check if field exists and has a value
-                                    if hasattr(status, descriptor.name):
-                                        value = getattr(status, descriptor.name)
-                                        # Log all fields for debugging, even zero values
-                                        _LOGGER.info("Delta Pro 3 field debug: %s = %s (type: %s)", descriptor.name, value, type(value))
-                                        
-                                        # Only add non-zero/non-empty values to reduce noise in final data
-                                        if value:
-                                            sensor_name = field_mapping.get(descriptor.name, descriptor.name)
-                                            
-                                            # Handle data type conversions for specific fields
-                                            converted_value = value
-                                            if descriptor.name in ['current', 'amp'] and value > 2147483647:
-                                                # Handle signed 32-bit integer overflow (battery current can be negative)
-                                                converted_value = value - 4294967296
-                                                _LOGGER.info("Delta Pro 3 converted signed int: %s = %d -> %d", descriptor.name, value, converted_value)
-                                            
-                                            raw["params"][sensor_name] = converted_value
-                                            parsed_fields += 1
-                                            _LOGGER.info("Delta Pro 3 mapped: %s -> %s = %s", descriptor.name, sensor_name, converted_value)
-                                except Exception as field_error:
-                                    _LOGGER.debug("Delta Pro 3 cmd_id 50: Error extracting field %s: %s", descriptor.name, field_error)
-                            
-                            if parsed_fields > 0:
-                                _LOGGER.info("Delta Pro 3 cmd_id 50: Parsed %u fields from DeltaPro3Status", parsed_fields)
-                            else:
-                                _LOGGER.debug("Delta Pro 3 cmd_id 50: No fields extracted, logging raw data")
-                                raw["params"]["cmd_50_raw_hex"] = pdata.hex()
-                            
+
+                            for proto_field, ha_field in field_mapping.items():
+                                if hasattr(status, proto_field):
+                                    raw_value = getattr(status, proto_field)
+                                    # Apply corrected scaling based on real data analysis
+                                    if proto_field == 'voltage':
+                                        mapped_value = raw_value / 1000  # millivolts to volts
+                                    elif proto_field == 'current':
+                                        if raw_value > 2147483647:
+                                            raw_value = raw_value - 4294967296
+                                        mapped_value = raw_value / 1000
+                                    elif proto_field == 'input_watts':
+                                        mapped_value = round(raw_value / 400, 1)
+                                    elif proto_field == 'output_watts':
+                                        mapped_value = round(raw_value / 53.4, 1)
+                                    elif proto_field in ['ac_in_vol', 'ac_out_vol']:
+                                        volts = raw_value / 27.9
+                                        mapped_value = int(volts * 1000)
+                                    elif proto_field.endswith('_watts') and raw_value > 50000:
+                                        mapped_value = 0
+                                    elif proto_field.endswith('_watts'):
+                                        mapped_value = raw_value / 100
+                                    elif proto_field in ['solar_in_energy','charge_ac_energy','charge_dc_energy','discharge_ac_energy','discharge_dc_energy']:
+                                        mapped_value = int(raw_value / 100)
+                                    else:
+                                        mapped_value = raw_value
+                                    
+                                    data["params"][ha_field] = mapped_value
+                                    _LOGGER.debug(f"Delta Pro 3 mapped: {proto_field} -> {ha_field} = {mapped_value}")
+
+                            # Extract solar data from protobuf fields
+                            experimental_hv_solar = 0
+                            experimental_lv_solar = 0  
+                            if hasattr(status, 'solar_hv_watts_raw') and getattr(status, 'solar_hv_watts_raw', 0) > 0:
+                                raw72 = getattr(status, 'solar_hv_watts_raw', 0)
+                                experimental_hv_solar = raw72 / 500  # Corrected scaling to match app (99W from ~49k raw)
+                                
+                                # Extract HV voltage and current from protobuf fields
+                                hv_voltage_raw = getattr(status, 'solar_hv_vol_raw', 0)
+                                hv_current_raw = getattr(status, 'solar_hv_cur_raw', 0)
+                                
+                                # Set HV solar values accounting for sensor entity additional scaling
+                                # InWattsSolarSensorEntity applies ÷10, so we multiply by 10
+                                # InVoltSolarSensorEntity applies ÷10, so we multiply by 10  
+                                # InAmpSolarSensorEntity applies ×10, so we divide by 10
+                                data["params"]["mppt.hvInWatts"] = experimental_hv_solar * 10  # Will be ÷10 by sensor → correct value
+                                
+                                # Calculate HV voltage and current with proper scaling
+                                if hv_voltage_raw > 0:
+                                    hv_voltage = hv_voltage_raw / 400  # Scale to realistic voltage
+                                else:
+                                    hv_voltage = 0
+                                    
+                                if hv_current_raw > 0:
+                                    hv_current_a = hv_current_raw / 37000  # Scale to realistic current
+                                    hv_current_ma = hv_current_a * 1000
+                                else:
+                                    hv_current_ma = 0
+                                
+                                data["params"]["mppt.hvInVol"] = hv_voltage * 10  # Will be ÷10 by sensor → correct V
+                                data["params"]["mppt.hvInAmp"] = hv_current_ma / 10  # Will be ×10 by sensor → correct mA
+                                    
+                            if hasattr(status, 'solar_lv_watts_raw2') and getattr(status, 'solar_lv_watts_raw2', 0) > 0:
+                                raw73 = getattr(status, 'solar_lv_watts_raw2', 0)
+                                experimental_lv_solar = raw73 / 2374  # Corrected scaling to match app (38W from ~90k raw)
+                                
+                                # Extract LV voltage and current from protobuf fields
+                                lv_voltage_raw = getattr(status, 'solar_lv_vol_raw', 0)    # Field 18
+                                lv_current_raw = getattr(status, 'solar_lv_cur_raw', 0)    # Field 19
+                                
+                                # Set LV solar values accounting for sensor entity additional scaling
+                                data["params"]["mppt.lvInWatts"] = experimental_lv_solar * 10  # Will be ÷10 by sensor → correct value
+                                
+                                # Calculate LV voltage and current with proper scaling
+                                if lv_voltage_raw > 0:
+                                    lv_voltage = lv_voltage_raw * 2.08  # Scale to panel voltage (~50V)
+                                else:
+                                    lv_voltage = 0
+                                    
+                                if lv_current_raw > 0:
+                                    lv_current_a = lv_current_raw * 0.036  # Scale to realistic current
+                                    lv_current_ma = lv_current_a * 1000
+                                else:
+                                    lv_current_ma = 0
+                                
+                                data["params"]["mppt.lvInVol"] = lv_voltage * 10  # Will be ÷10 by sensor → correct V
+                                data["params"]["mppt.lvInAmp"] = lv_current_ma / 10  # Will be ×10 by sensor → correct mA
                         except Exception as e:
-                            _LOGGER.debug("Delta Pro 3 cmd_id 50: Failed to parse as DeltaPro3Status: %s", e)
+                            _LOGGER.warning("Delta Pro 3 cmd_id 50: Failed to parse as DeltaPro3Status: %s", e)
                             # Continue logging raw data for analysis
-                            raw["params"]["cmd_50_raw_hex"] = pdata.hex()
-                            raw["params"]["cmd_50_length"] = len(pdata)
+                            data["params"]["cmd_50_raw_hex"] = pdata.hex()
+                            data["params"]["cmd_50_length"] = len(pdata)
                     
                     elif packet.msg.cmd_id == 21:
                         # cmd_id 21: Heartbeat - appears to be encrypted/encoded data
                         # Variable length (56-92 bytes), no clear pattern found
                         # For now, just log for future analysis when we understand the encoding
                         _LOGGER.debug("Delta Pro 3 cmd_id 21: Encrypted/encoded heartbeat data (%u bytes) - logging for analysis", len(pdata))
-                        raw["params"]["cmd_21_raw_hex"] = pdata.hex()
-                        raw["params"]["cmd_21_length"] = len(pdata)
+                        data["params"]["cmd_21_raw_hex"] = pdata.hex()
+                        data["params"]["cmd_21_length"] = len(pdata)
+                    
+                    elif packet.msg.cmd_id == 2:
+                        # cmd_id 2: Store raw data for future analysis
+                        _LOGGER.debug("Delta Pro 3 cmd_id %u pdata hex: %s", packet.msg.cmd_id, pdata.hex())
+                        data["params"][f"cmd_{packet.msg.cmd_id}_raw_hex"] = pdata.hex()
+                        data["params"][f"cmd_{packet.msg.cmd_id}_length"] = len(pdata)
                     
                     else:
                         # cmd_id 2, 22: Still analyzing - keep raw data
                         _LOGGER.debug("Delta Pro 3 cmd_id %u pdata hex: %s", packet.msg.cmd_id, pdata.hex())
-                        raw["params"][f"cmd_{packet.msg.cmd_id}_raw_hex"] = pdata.hex()
-                        raw["params"][f"cmd_{packet.msg.cmd_id}_length"] = len(pdata)
+                        data["params"][f"cmd_{packet.msg.cmd_id}_raw_hex"] = pdata.hex()
+                        data["params"][f"cmd_{packet.msg.cmd_id}_length"] = len(pdata)
                     
-                    raw["timestamp"] = utcnow()
+                    data["timestamp"] = utcnow()
 
                 # Check if we've processed the entire payload
                 try:
@@ -359,8 +447,8 @@ class DeltaPro3(BaseDevice):
             _LOGGER.debug("Delta Pro 3 parsing error: %s", error)
             _LOGGER.debug("Delta Pro 3 raw data: %s", raw_data.hex() if raw_data else "None")
             # Don't fail completely - return what we have
-            if not raw.get("params"):
-                raw["params"]["parse_error"] = str(error)
-                raw["params"]["raw_data_hex"] = raw_data.hex() if raw_data else "None"
+            if not data.get("params"):
+                data["params"]["parse_error"] = str(error)
+                data["params"]["raw_data_hex"] = raw_data.hex() if raw_data else "None"
 
-        return raw 
+        return data 
