@@ -283,30 +283,32 @@ class DeltaPro3(InternalDeltaPro3):
                             
                             # Extract all available fields safely
                             parsed_fields = 0
-                            _LOGGER.info("Delta Pro 3 (Public) cmd_id 50: Starting field extraction debug...")
                             
                             for descriptor in status.DESCRIPTOR.fields:
                                 try:
                                     # Check if field exists and has a value
                                     if hasattr(status, descriptor.name):
                                         value = getattr(status, descriptor.name)
-                                        # Log all fields for debugging, even zero values
-                                        _LOGGER.info("Delta Pro 3 (Public) field debug: %s = %s (type: %s)", descriptor.name, value, type(value))
                                         
-                                        # Only add non-zero/non-empty values to reduce noise in final data
-                                        if value:
+                                        # Process ALL power fields regardless of value, other fields only if non-zero
+                                        if value or 'watts' in descriptor.name:
                                             sensor_name = field_mapping.get(descriptor.name, descriptor.name)
                                             
-                                            # Handle data type conversions for specific fields
+                                            # Handle data type conversions and scaling for specific fields
                                             converted_value = value
                                             if descriptor.name in ['current', 'amp'] and value > 2147483647:
                                                 # Handle signed 32-bit integer overflow (battery current can be negative)
                                                 converted_value = value - 4294967296
                                                 _LOGGER.info("Delta Pro 3 (Public) converted signed int: %s = %d -> %d", descriptor.name, value, converted_value)
+                                            elif descriptor.name == 'input_watts':
+                                                # Apply scaling to match EcoFlow app total input power
+                                                converted_value = round(value / 400, 1) if value > 0 else 0
+                                            elif descriptor.name == 'output_watts':
+                                                # Apply scaling to match EcoFlow app total output power
+                                                converted_value = round(value / 53.4, 1) if value > 0 else 0
                                             
                                             raw["params"][sensor_name] = converted_value
                                             parsed_fields += 1
-                                            _LOGGER.info("Delta Pro 3 (Public) mapped: %s -> %s = %s", descriptor.name, sensor_name, converted_value)
                                 except Exception as field_error:
                                     _LOGGER.debug("Delta Pro 3 (Public) cmd_id 50: Error extracting field %s: %s", descriptor.name, field_error)
                             

@@ -1467,7 +1467,7 @@ Request API Access to Ecoflow United States:
 
 </p></details>
 
-<details><summary> DELTA_PRO_3 <i>(sensors: 71, switches: 6, sliders: 6, selects: 4)</i> </summary>
+<details><summary> DELTA_PRO_3 <i>(sensors: 74, switches: 6, sliders: 6, selects: 4)</i> </summary>
 <p>
 
 *Sensors*
@@ -1486,9 +1486,12 @@ Request API Access to Ecoflow United States:
 - AC Out Power
 - AC In Volts
 - AC Out Volts
-- Solar In Power
-- Solar In Voltage
-- Solar In Current
+- Solar (1) (LV) In Power
+- Solar (1) (LV) In Voltage
+- Solar (1) (LV) In Current
+- Solar (2) (HV) In Power
+- Solar (2) (HV) In Voltage  
+- Solar (2) (HV) In Current
 - DC Out Power
 - DC Out Voltage
 - DC Car Out Power
@@ -1567,7 +1570,7 @@ Request API Access to Ecoflow United States:
 
 </p></details>
 
-<details><summary> DELTA Pro 3 (API) <i>(sensors: 71, switches: 6, sliders: 6, selects: 4)</i> </summary>
+<details><summary> DELTA Pro 3 (API) <i>(sensors: 74, switches: 6, sliders: 6, selects: 4)</i> </summary>
 <p>
 
 *Sensors*
@@ -1586,9 +1589,12 @@ Request API Access to Ecoflow United States:
 - AC Out Power
 - AC In Volts
 - AC Out Volts
-- Solar In Power
-- Solar In Voltage
-- Solar In Current
+- Solar (1) (LV) In Power
+- Solar (1) (LV) In Voltage
+- Solar (1) (LV) In Current
+- Solar (2) (HV) In Power
+- Solar (2) (HV) In Voltage  
+- Solar (2) (HV) In Current
 - DC Out Power
 - DC Out Voltage
 - DC Car Out Power

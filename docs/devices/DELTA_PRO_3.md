@@ -1,5 +1,7 @@
 # DELTA Pro 3
 
+**Note**: This device has been optimized with accurate solar sensor scaling and power monitoring. Solar sensors clearly distinguish between HV (High Voltage) and LV (Low Voltage) inputs with proper voltage/current/power measurements.
+
 ## Sensors
 
 | Sensor | Key |
@@ -19,13 +21,17 @@
 | AC Out Power | `inv.outputWatts` |
 | AC In Volts | `inv.acInVol` |
 | AC Out Volts | `inv.invOutVol` |
-| Solar In Power | `mppt.inWatts` |
-| Solar In Voltage | `mppt.inVol` |
-| Solar In Current | `mppt.inAmp` |
+| Solar (1) (LV) In Power | `mppt.inWatts` |
+| Solar (1) (LV) In Voltage | `mppt.inVol` |
+| Solar (1) (LV) In Current | `mppt.inAmp` |
+| Solar (2) (HV) In Power | `mppt.hvInWatts` |
+| Solar (2) (HV) In Voltage | `mppt.hvInVol` |
+| Solar (2) (HV) In Current | `mppt.hvInAmp` |
 | DC Out Power | `mppt.outWatts` |
 | DC Out Voltage | `mppt.outVol` |
 | DC Car Out Power | `mppt.carOutWatts` |
 | DC Anderson Out Power | `mppt.dcdc12vWatts` |
+| Smart Home Panel Out Power | `mppt.smartPanelWatts` |
 | Type-C (1) Out Power | `pd.typec1Watts` |
 | Type-C (2) Out Power | `pd.typec2Watts` |
 | USB (1) Out Power | `pd.usb1Watts` |
