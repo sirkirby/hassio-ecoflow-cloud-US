@@ -1,123 +1,231 @@
 syntax = "proto3";
 
 // Delta Pro 3 main status message (cmd_id 50)
-// Field mappings confirmed through comprehensive analysis
+// Based on official EcoFlow IoT Developer Documentation
 message DeltaPro3Status {
-    // Basic device info
-    optional uint32 unknown1 = 1;              // Always 0
-    optional uint32 unknown2 = 2;              // Variable data
-    optional uint32 unknown3 = 3;              // Always 0
-    optional uint32 unknown4 = 4;              // Always 0
-    optional uint64 timestamp = 5;             // System timestamp
+    // Basic device info and status
+    optional uint32 errcode = 1;                    // Device error code
+    optional uint32 devSleepState = 2;              // Sleep status
+    optional uint32 devStandbyTime = 3;             // Device timeout (min)
+    optional uint32 dcStandbyTime = 4;              // DC timeout (min)
+    optional uint32 bleStandbyTime = 5;             // Bluetooth timeout (h)
+    optional uint32 acStandbyTime = 6;              // AC timeout (min)
     
-    // Battery fields (confirmed EcoFlow standard mappings)
-    optional uint32 soc = 6;                   // Battery state of charge %
-    optional uint32 voltage = 7;               // Battery voltage (mV)
-    optional uint32 current = 8;               // Battery current (mA, signed)
-    optional uint32 temp = 9;                  // Battery temperature (°C)
-    optional uint32 cycles = 10;               // Battery cycle count
+    // Battery Management System (BMS) - Main Battery
+    optional uint32 cmsMinDsgSoc = 7;               // Discharge limit
+    optional uint32 cmsChgDsgState = 8;             // Charging/Discharging status
+    optional uint32 cmsBmsRunState = 9;             // On/Off status
+    optional float cmsBattSoc = 10;                 // Overall SOC (float)
+    optional uint32 cmsMaxChgSoc = 11;              // Charge limit
+    optional uint32 cmsChgRemTime = 12;             // Remaining charging time (min)
+    optional bool cmsOilSelfStart = 13;             // Smart Generator auto start/stop
+    optional uint32 cmsOilOffSoc = 14;              // SOC for stopping Smart Generator
+    optional uint32 cmsDsgRemTime = 15;             // Remaining discharging time (min)
+    optional uint32 cmsOilOnSoc = 16;               // SOC for starting Smart Generator
     
-    // Power fields (confirmed mappings)
-    optional uint32 input_watts = 11;          // Total input power (mW)
-    optional uint32 output_watts = 12;         // Total output power (mW)
-    optional uint32 ac_in_watts = 13;          // AC input power (mW)
-    optional uint32 ac_out_watts = 14;         // AC output power (mW)
-    optional uint32 ac_in_vol = 15;            // AC input voltage (mV)
-    optional uint32 ac_out_vol = 16;           // AC output voltage (mV)
+    // Battery specific data
+    optional uint32 bmsChgRemTime = 17;             // Main battery charging time (min)
+    optional uint32 bmsDesignCap = 18;              // Battery capacity (mAh)
+    optional uint32 bmsMaxCellTemp = 19;            // Max temperature (°C)
+    optional float bmsBattSoc = 20;                 // Main battery SOC (float)
+    optional uint32 bmsChgDsgState = 21;            // Main battery charge/discharge status
+    optional uint32 bmsMinCellTemp = 22;            // Min temperature (°C)
+    optional uint32 bmsDsgRemTime = 23;             // Main battery discharge time (min)
     
-    // Solar/MPPT fields - LV solar (basic fields for reference)
-    // NOTE: These may represent LV solar, but we'll use raw fields for extraction
-    optional uint32 solar_lv_watts_basic = 17;    // LV solar power (basic mapping)
-    optional uint32 solar_lv_vol_raw = 18;        // LV solar voltage (raw, needs scaling)
-    optional uint32 solar_lv_cur_raw = 19;        // LV solar current (raw, needs scaling)
+    // === CRITICAL POWER FIELDS (Official API) ===
+    optional float powInSumW = 24;                  // Total input power (W) - TARGET: 523W
+    optional float powOutSumW = 25;                 // Total output power (W) - TARGET: 344W
+    optional float powGetAcHvOut = 26;              // Real-time grid power (W) - AC HV output
+    optional float powGetAc = 27;                   // Real-time AC power (W)
+    optional float powGetTypec1 = 28;               // Real-time Type-C port 1 power (W)
+    optional float powGetTypec2 = 29;               // Real-time Type-C port 2 power (W)
+    optional float powGet12v = 30;                  // Real-time 12V power (W)
+    optional float powGet24v = 31;                  // Real-time 24V power (W)
+    optional float powGetAcLvOut = 32;              // Real-time low-voltage AC output (W)
+    optional float powGet5p8 = 33;                  // Real-time Power In/Out port (W)
+    optional float powGetQcusb1 = 34;               // Real-time USB 1 power (W)
+    optional float powGetQcusb2 = 35;               // Real-time USB 2 power (W)
+    optional float powGet4p81 = 36;                 // Real-time Extra Battery Port 1 (W)
+    optional float powGet4p82 = 37;                 // Real-time Extra Battery Port 2 (W)
+    optional float powGetAcLvTt30Out = 38;          // Real-time LV AC output port (W)
+    optional float powGetPvH = 39;                  // Real-time high-voltage PV (W) - TARGET: 364W
+    optional float powGetAcIn = 40;                 // Real-time AC input power (W)
+    optional float powGetPvL = 41;                  // Real-time low-voltage PV (W) - TARGET: 159W
     
-    // DC output fields
-    optional uint32 dc_out_watts = 20;         // DC output power (mW)
-    optional uint32 car_out_watts = 21;        // Car port output (mW)
-    optional uint32 anderson_watts = 22;       // Anderson port output (mW)
+    // Port connection and configuration info
+    optional uint32 plugInInfoAcInChgHalPowMax = 42;    // Max AC charging power
+    optional bool plugInInfoPvHChargerFlag = 43;        // PV HV connection status
+    optional uint32 plugInInfo4p82InFlag = 44;          // Extra Battery port connection
+    optional uint32 plugInInfoPvLChgAmpMax = 45;        // Max PV charging current
+    optional uint32 plugInInfoAcInFeq = 46;             // AC input frequency
+    optional uint32 plugInInfoPvLType = 47;             // PV port charging mode
+    optional uint32 plugInInfo5p8RunState = 48;         // Power In/Out port status
+    optional uint32 plugInInfo4p82RunState = 49;        // Extra Battery Port 2 status
+    optional bool plugInInfo4p81ChargerFlag = 50;       // Extra Battery Port 1 connection
     
-    // USB outputs
-    optional uint32 usb1_watts = 23;           // USB 1 output (mW)
-    optional uint32 usb2_watts = 24;           // USB 2 output (mW)
-    optional uint32 typec1_watts = 25;         // Type-C 1 output (mW)
-    optional uint32 typec2_watts = 26;         // Type-C 2 output (mW)
+    // Additional port configuration
+    optional uint32 plugInInfo5p8ChgHalPowMax = 51;     // Power In/Out port status
+    optional uint32 plugInInfoPvHChgAmpMax = 52;        // HV PV max charging current (A)
+    optional uint32 plugInInfo5p8DsgPowMax = 53;        // Power In/Out max discharge power
+    optional uint32 plugInInfoAcInChgPowMax = 54;       // Max AC charging power (W)
+    optional uint32 plugInInfoPvHType = 55;             // HV PV port charging mode
+    optional bool plugInInfo5p8ChargerFlag = 56;        // Power In/Out port status
+    optional uint32 plugInInfoAcInFlag = 57;            // AC charging port connection
+    optional uint32 plugInInfo4p81DsgChgType = 58;      // Extra Battery Port 1 charge type
+    optional bool plugInInfoAcChargerFlag = 59;         // AC port charger connection
+    optional uint32 plugInInfoPvHFlag = 60;             // HV PV port connection
     
-    // Time estimates
-    optional uint32 charge_time = 27;          // Charge time remaining (minutes)
-    optional uint32 discharge_time = 28;       // Discharge time remaining (minutes)
+    // Device serial numbers and more port info
+    optional string plugInInfo4p81Sn = 61;              // Extra Battery port SN
+    optional uint32 plugInInfo4p82DsgChgType = 62;      // Extra Battery Port 2 charge type
+    optional uint32 plugInInfoPvHDcAmpMax = 63;         // HV PV max DC current (A)
+    optional uint32 plugInInfo4p81InFlag = 64;          // Extra Battery Port 1 connection
+    optional bool plugInInfo4p82ChargerFlag = 65;       // Extra Battery Port 2 connection
+    optional uint32 plugInInfoPvLChgVolMax = 66;        // LV PV max charging voltage (V)
+    optional uint32 plugInInfoPvLDcAmpMax = 67;         // LV PV max DC current (A)
+    optional uint32 plugInInfo5p8Flag = 68;             // Power In/Out port connection
+    optional uint32 plugInInfoAcOutDsgPowMax = 69;      // Max AC discharge power
+    optional string plugInInfo5p8Sn = 70;               // Power In/Out port SN
+    optional bool plugInInfoPvLChargerFlag = 71;        // LV PV charger connection
+    optional string plugInInfo4p82Sn = 72;              // Extra Battery Port 2 SN
+    optional uint32 plugInInfo5p8ChgPowMax = 73;        // Power In/Out max charge power
+    optional uint32 plugInInfoPvLFlag = 74;             // LV PV port connection
+    optional uint32 plugInInfo4p81RunState = 75;        // Extra Battery Port 1 status
+    optional uint32 plugInInfoPvHChgVolMax = 76;        // HV PV max charging voltage (V)
+    optional uint32 plugInInfo5p8DsgChg = 77;           // Power In/Out charge/discharge type
     
-    // Battery capacity info
-    optional uint32 remain_cap = 29;           // Remaining capacity (mAh)
-    optional uint32 full_cap = 30;            // Full capacity (mAh)
-    optional uint32 design_cap = 31;          // Design capacity (mAh)
-    optional uint32 soh = 32;                 // State of health %
+    // Flow/Switch status information
+    optional uint32 flowInfoPvL = 78;                   // LV PV switch status (0: off, 2: on)
+    optional uint32 flowInfoPvH = 79;                   // HV PV switch status (0: off, 2: on)
+    optional uint32 flowInfoTypec1 = 80;                // Type-C 1 switch status (0: off, 2: on)
+    optional uint32 flowInfoTypec2 = 81;                // Type-C 2 switch status (0: off, 2: on)
+    optional uint32 flowInfoAcLvOut = 82;               // AC LV output switch status
+    optional uint32 flowInfo4p82Out = 83;               // Extra Battery port output status
+    optional uint32 flowInfoAcIn = 84;                  // AC input switch status
+    optional uint32 flowInfoAcHvOut = 85;               // HV AC output switch status
+    optional uint32 flowInfo12v = 86;                   // 12V output switch status
+    optional uint32 flowInfo24v = 87;                   // 24V output switch status
+    optional uint32 flowInfo4p81In = 88;                // Extra Battery Port 1 input status
+    optional uint32 flowInfoQcusb1 = 89;                // USB 1 output switch status
+    optional uint32 flowInfoQcusb2 = 90;                // USB 2 output switch status
+    optional uint32 flowInfo4p82In = 91;                // Extra Battery Port 2 input status
+    optional uint32 flowInfo5p8In = 92;                 // Power In/Out port switch status
+    optional uint32 flowInfo4p81Out = 93;               // Extra Battery Port 1 switch status
+    optional uint32 flowInfo5p8Out = 94;                // Power In/Out port switch status
     
-    // Cell info
-    optional uint32 min_cell_vol = 33;        // Minimum cell voltage (mV)
-    optional uint32 max_cell_vol = 34;        // Maximum cell voltage (mV)
-    optional uint32 min_cell_temp = 35;       // Minimum cell temperature (°C)
-    optional uint32 max_cell_temp = 36;       // Maximum cell temperature (°C)
+    // Configuration and settings
+    optional bool acEnergySavingOpen = 95;              // AC energy-saving mode
+    optional uint32 multiBpChgDsgMode = 96;             // Battery charge/discharge order
+    optional uint32 fastChargeSwitch = 97;              // Fast charging slider switch
+    optional uint32 lcdLight = 98;                      // Screen brightness
+    optional bool energyBackupEn = 99;                  // Backup reserve function
+    optional uint32 acOutFreq = 100;                    // AC output frequency
+    optional bool xboostEn = 101;                       // X-Boost switch
+    optional uint32 llcHvLvFlag = 102;                  // HV/LV AC identifier
+    optional bool llcGFCIFlag = 103;                    // GFCI switch
+    optional bool acLvAlwaysOn = 104;                   // AC Always-on
+    optional uint32 screenOffTime = 105;                // Screen timeout (s)
+    optional uint32 energyBackupStartSoc = 106;         // Backup reserve level
+    optional bool acHvAlwaysOn = 107;                   // HV AC Always-on function
+    optional uint32 acAlwaysOnMiniSoc = 108;            // Min SOC for AC Always-on
+    optional bool enBeep = 109;                         // Beeper on/off
+    optional bool generatorPvHybridModeOpen = 110;      // Generator solar hybrid mode
+    optional bool generatorCareModeOpen = 111;          // Night care mode
+    optional uint32 generatorPvHybridModeSocMax = 112;  // Max SOC in generator hybrid mode
     
-    // Control states
-    optional bool ac_enabled = 37;            // AC output enabled
-    optional bool dc_enabled = 38;            // DC output enabled
-    optional bool beeper_enabled = 39;        // Beeper enabled
-    
-    // Error/warning codes
-    optional uint32 error_code = 40;          // Error code
-    optional uint32 warning_code = 41;        // Warning code
-    
-    // Extended fields found in analysis
-    optional uint32 unknown42 = 42;          // Always 0
-    optional uint32 unknown43 = 43;          // Always 0
-    optional uint32 unknown44 = 44;          // Always 0
-    optional uint32 unknown45 = 45;          // Large value ~4294967295
-    optional uint32 unknown46 = 46;          // Small value ~3
-    optional uint32 unknown47 = 47;          // Small value ~1
-    optional uint32 unknown48 = 48;          // Always 0
-    optional uint32 unknown49 = 49;          // Always 0
-    optional uint32 unknown50 = 50;          // Variable ~970423
-    
-    // Energy accumulation fields for Home Assistant energy dashboard
-    optional uint32 solar_in_energy = 51;     // Solar input energy (Wh)
-    optional uint32 charge_ac_energy = 52;    // AC charging energy (Wh)
-    optional uint32 charge_dc_energy = 53;    // DC charging energy (Wh)
-    optional uint32 discharge_ac_energy = 54; // AC discharge energy (Wh)
-    optional uint32 discharge_dc_energy = 55; // DC discharge energy (Wh)
-    
-    // USB QC outputs
-    optional uint32 qc_usb1_watts = 56;       // USB QC 1 output (mW)
-    optional uint32 qc_usb2_watts = 57;       // USB QC 2 output (mW)
-    
-    // Additional confirmed fields
-    optional uint32 unknown58 = 58;          // Always 0
-    optional uint32 unknown59 = 59;          // Always 0
-    optional uint32 unknown60 = 60;          // Always 0
-    optional uint32 unknown61 = 61;          // Excluded: solar_lv_watts (would create duplicates)
-    optional uint32 unknown62 = 62;          // Always 0
-    optional uint32 unknown63 = 63;          // Excluded: solar_lv_cur (would create duplicates)
-    optional uint32 unknown64 = 64;          // Variable ~25
-    optional uint32 unknown65 = 65;          // Always 0
-    optional uint32 unknown66 = 66;          // Always 0
-    optional uint32 unknown67 = 67;          // Variable ~22
-    optional uint32 unknown68 = 68;          // Variable ~22
-    optional uint32 unknown69 = 69;          // Always 0
-    optional uint32 unknown70 = 70;          // Always 0
-    
-    // Raw solar data fields (confirmed working mappings)
-    optional uint32 unknown71 = 71;          // Variable ~3
-    optional uint32 solar_hv_watts_raw = 72; // Solar HV raw power (confirmed)
-    optional uint32 solar_lv_watts_raw2 = 73; // Solar LV raw power (confirmed)
-    
-    // Additional raw fields
-    optional uint32 unknown74 = 74;          // Always 0
-    optional uint32 unknown75 = 75;          // Always 0
-    optional uint32 unknown76 = 76;          // Always 0
-    optional uint32 unknown77 = 77;          // Always 0
-    optional uint32 unknown78 = 78;          // Always 0
-    optional uint32 solar_hv_vol_raw = 79;   // HV solar voltage (raw, variable ~52228)
-    optional uint32 solar_hv_cur_raw = 80;   // HV solar current (raw, variable ~49244)
+    // Additional fields for comprehensive coverage (113-200)
+    optional uint32 unknown113 = 113;
+    optional uint32 unknown114 = 114;
+    optional uint32 unknown115 = 115;
+    optional uint32 unknown116 = 116;
+    optional uint32 unknown117 = 117;
+    optional uint32 unknown118 = 118;
+    optional uint32 unknown119 = 119;
+    optional uint32 unknown120 = 120;
+    optional uint32 unknown121 = 121;
+    optional uint32 unknown122 = 122;
+    optional uint32 unknown123 = 123;
+    optional uint32 unknown124 = 124;
+    optional uint32 unknown125 = 125;
+    optional uint32 unknown126 = 126;
+    optional uint32 unknown127 = 127;
+    optional uint32 unknown128 = 128;
+    optional uint32 unknown129 = 129;
+    optional uint32 unknown130 = 130;
+    optional uint32 unknown131 = 131;
+    optional uint32 unknown132 = 132;
+    optional uint32 unknown133 = 133;
+    optional uint32 unknown134 = 134;
+    optional uint32 unknown135 = 135;
+    optional uint32 unknown136 = 136;
+    optional uint32 unknown137 = 137;
+    optional uint32 unknown138 = 138;
+    optional uint32 unknown139 = 139;
+    optional uint32 unknown140 = 140;
+    optional uint32 unknown141 = 141;
+    optional uint32 unknown142 = 142;
+    optional uint32 unknown143 = 143;
+    optional uint32 unknown144 = 144;
+    optional uint32 unknown145 = 145;
+    optional uint32 unknown146 = 146;
+    optional uint32 unknown147 = 147;
+    optional uint32 unknown148 = 148;
+    optional uint32 unknown149 = 149;
+    optional uint32 unknown150 = 150;
+    optional uint32 unknown151 = 151;
+    optional uint32 unknown152 = 152;
+    optional uint32 unknown153 = 153;
+    optional uint32 unknown154 = 154;
+    optional uint32 unknown155 = 155;
+    optional uint32 unknown156 = 156;
+    optional uint32 unknown157 = 157;
+    optional uint32 unknown158 = 158;
+    optional uint32 unknown159 = 159;
+    optional uint32 unknown160 = 160;
+    optional uint32 unknown161 = 161;
+    optional uint32 unknown162 = 162;
+    optional uint32 unknown163 = 163;
+    optional uint32 unknown164 = 164;
+    optional uint32 unknown165 = 165;
+    optional uint32 unknown166 = 166;
+    optional uint32 unknown167 = 167;
+    optional uint32 unknown168 = 168;
+    optional uint32 unknown169 = 169;
+    optional uint32 unknown170 = 170;
+    optional uint32 unknown171 = 171;
+    optional uint32 unknown172 = 172;
+    optional uint32 unknown173 = 173;
+    optional uint32 unknown174 = 174;
+    optional uint32 unknown175 = 175;
+    optional uint32 unknown176 = 176;
+    optional uint32 unknown177 = 177;
+    optional uint32 unknown178 = 178;
+    optional uint32 unknown179 = 179;
+    optional uint32 unknown180 = 180;
+    optional uint32 unknown181 = 181;
+    optional uint32 unknown182 = 182;
+    optional uint32 unknown183 = 183;
+    optional uint32 unknown184 = 184;
+    optional uint32 unknown185 = 185;
+    optional uint32 unknown186 = 186;
+    optional uint32 unknown187 = 187;
+    optional uint32 unknown188 = 188;
+    optional uint32 unknown189 = 189;
+    optional uint32 unknown190 = 190;
+    optional uint32 unknown191 = 191;
+    optional uint32 unknown192 = 192;
+    optional uint32 unknown193 = 193;
+    optional uint32 unknown194 = 194;
+    optional uint32 unknown195 = 195;
+    optional uint32 unknown196 = 196;
+    optional uint32 unknown197 = 197;
+    optional uint32 unknown198 = 198;
+    optional uint32 unknown199 = 199;
+    optional uint32 unknown200 = 200;
 }
 
 // Note: cmd_id 21 (heartbeat) appears to be encrypted/encoded data
 // Analysis shows it contains periodic system health information
+
+// TODO: Need to regenerate protobuf after expanding field definitions
+// Run: protoc --python_out=. delta_pro3.proto
