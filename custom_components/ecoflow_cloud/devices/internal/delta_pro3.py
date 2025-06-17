@@ -14,48 +14,113 @@ from custom_components.ecoflow_cloud.switch import BeeperEntity, EnabledEntity
 
 
 class DeltaPro3(BaseDevice):
+    # --- Local helper sensor entity classes for DP3 integer-scaled values ---
+
+    class _LevelKSensorEntity(LevelSensorEntity):
+        """Battery level or percentage sensor – raw value is x1000."""
+
+        def _update_value(self, val):  # type: ignore[override]
+            try:
+                return super()._update_value(int(val) / 1000)
+            except Exception:
+                return False
+
+    class _InKWattsSensorEntity(InWattsSensorEntity):
+        """Input power sensors where raw integer value is x1000 W."""
+
+        def _update_value(self, val):  # type: ignore[override]
+            try:
+                return super()._update_value(int(val) / 1000)
+            except Exception:
+                return False
+
+    class _OutKWattsSensorEntity(OutWattsSensorEntity):
+        """Output power sensors where raw integer value is x1000 W."""
+
+        def _update_value(self, val):  # type: ignore[override]
+            try:
+                return super()._update_value(int(val) / 1000)
+            except Exception:
+                return False
+
+    class _OutKWattsDcSensorEntity(OutWattsDcSensorEntity):
+        """DC output power sensors where raw integer value is x1000 W."""
+
+        def _update_value(self, val):  # type: ignore[override]
+            try:
+                return super()._update_value(int(val) / 1000)
+            except Exception:
+                return False
+
+    class _InDeciWattsSensorEntity(InWattsSensorEntity):
+        """Input power sensors where raw integer value is x10 (0.1 W resolution)."""
+
+        def _update_value(self, val):  # type: ignore[override]
+            try:
+                return super()._update_value(int(val) / 10)
+            except Exception:
+                return False
+
+    class _OutDeciWattsSensorEntity(OutWattsSensorEntity):
+        """Output power sensors where raw integer value is x10 (0.1 W resolution)."""
+
+        def _update_value(self, val):  # type: ignore[override]
+            try:
+                return super()._update_value(int(val) / 10)
+            except Exception:
+                return False
+
+    class _InCentiWattsSensorEntity(InWattsSensorEntity):
+        """Input power sensor where raw integer value is x100 (0.01 kW = 0.1 W resolution)."""
+
+        def _update_value(self, val):  # type: ignore[override]
+            try:
+                return super()._update_value(int(val) / 100)
+            except Exception:
+                return False
+
+    # -----------------------------------------------------------------------
     def sensors(self, client: EcoflowApiClient) -> list[BaseSensorEntity]:
         return [
             # Main Battery - Using official Delta Pro 3 field names from documentation
-            LevelSensorEntity(client, self, "cmsBattSoc", const.MAIN_BATTERY_LEVEL),  # Overall SOC (float)
-            LevelSensorEntity(client, self, "bmsBattSoc", const.MAIN_BATTERY_LEVEL_F32, False),  # Main battery SOC (float)
+            self._LevelKSensorEntity(client, self, "cmsBattSoc", const.MAIN_BATTERY_LEVEL),  # Overall SOC
+            self._LevelKSensorEntity(client, self, "bmsBattSoc", const.MAIN_BATTERY_LEVEL_F32, False),  # Main battery SOC
             CapacitySensorEntity(client, self, "bmsDesignCap", const.MAIN_DESIGN_CAPACITY, False),  # Battery capacity (mAh)
             
             # Combined battery level (for systems with multiple batteries)
-            LevelSensorEntity(client, self, "cmsBattSoc", const.COMBINED_BATTERY_LEVEL),
+            self._LevelKSensorEntity(client, self, "cmsBattSoc", const.COMBINED_BATTERY_LEVEL),
 
             # === CRITICAL POWER FIELDS (Official API) ===
-            InWattsSensorEntity(client, self, "powInSumW", const.TOTAL_IN_POWER),  # Total input power (W)
+            self._InKWattsSensorEntity(client, self, "powInSumW", const.TOTAL_IN_POWER),  # Total input power
             OutWattsSensorEntity(client, self, "powOutSumW", const.TOTAL_OUT_POWER),  # Total output power (W)
 
-            # AC Input/Output - Official field names
-            InWattsSensorEntity(client, self, "powGetAcIn", const.AC_IN_POWER),  # Real-time AC input power (W)
-            OutWattsSensorEntity(client, self, "powGetAc", const.AC_OUT_POWER),  # Real-time AC power (W)
-            OutWattsSensorEntity(client, self, "powGetAcHvOut", "HV AC Output Power"),  # Real-time grid power (W)
-            OutWattsSensorEntity(client, self, "powGetAcLvOut", "LV AC Output Power"),  # Real-time LV AC output (W)
+            # AC Input/Output - Official field names (raw x1000 ints)
+            self._InKWattsSensorEntity(client, self, "powGetAcIn", const.AC_IN_POWER),  # Real-time AC input power
+            self._OutKWattsSensorEntity(client, self, "powGetAc", const.AC_OUT_POWER),  # Real-time AC power
+            self._OutKWattsSensorEntity(client, self, "powGetAcHvOut", "HV AC Output Power"),  # Grid
+            self._OutKWattsSensorEntity(client, self, "powGetAcLvOut", "LV AC Output Power"),  # LV AC
 
-            # Solar Input - Official field names
-            InWattsSolarSensorEntity(client, self, "powGetPvH", const.SOLAR_1_IN_POWER),  # Real-time HV PV power (W)
-            InWattsSolarSensorEntity(client, self, "powGetPvL", const.SOLAR_2_IN_POWER),  # Real-time LV PV power (W)
+            # --- Solar Input (clean) ---
+            # HV string reports in powGetPvH (value ×100)
+            self._InCentiWattsSensorEntity(client, self, "powGetPvH", const.SOLAR_1_IN_POWER),  # Solar HV
+            # LV string reports in powGetPvL (value ×100)
+            self._InCentiWattsSensorEntity(client, self, "powGetPvL", const.SOLAR_2_IN_POWER),  # Solar LV
 
             # DC Output - Official field names
-            OutWattsDcSensorEntity(client, self, "powGet12v", const.DC_OUT_POWER),  # Real-time 12V power (W)
-            OutWattsSensorEntity(client, self, "powGet24v", "24V Output Power"),  # Real-time 24V power (W)
+            self._OutKWattsDcSensorEntity(client, self, "powGet12v", const.DC_OUT_POWER),  # 12V power
+            self._OutKWattsSensorEntity(client, self, "powGet24v", "24V Output Power"),  # 24V power
 
             # Type-C Output - Official field names
-            OutWattsSensorEntity(client, self, "powGetTypec1", const.TYPEC_1_OUT_POWER),  # Real-time Type-C 1 power (W)
-            OutWattsSensorEntity(client, self, "powGetTypec2", const.TYPEC_2_OUT_POWER),  # Real-time Type-C 2 power (W)
+            self._OutKWattsSensorEntity(client, self, "powGetTypec1", const.TYPEC_1_OUT_POWER),  # Type-C 1
+            self._OutKWattsSensorEntity(client, self, "powGetTypec2", const.TYPEC_2_OUT_POWER),  # Type-C 2
 
             # USB Output - Official field names
-            OutWattsSensorEntity(client, self, "powGetQcusb1", const.USB_QC_1_OUT_POWER),  # Real-time USB 1 power (W)
-            OutWattsSensorEntity(client, self, "powGetQcusb2", const.USB_QC_2_OUT_POWER),  # Real-time USB 2 power (W)
-
-            # Power In/Out port - Official field names
-            OutWattsSensorEntity(client, self, "powGet5p8", "Power In/Out Port Power"),  # Real-time Power In/Out port (W)
+            self._OutKWattsSensorEntity(client, self, "powGetQcusb1", const.USB_QC_1_OUT_POWER),  # USB 1
+            self._OutKWattsSensorEntity(client, self, "powGetQcusb2", const.USB_QC_2_OUT_POWER),  # Real-time USB 2 power (W)
 
             # Extra Battery ports - Official field names  
-            OutWattsSensorEntity(client, self, "powGet4p81", "Extra Battery Port 1 Power"),  # Real-time Extra Battery Port 1 (W)
-            OutWattsSensorEntity(client, self, "powGet4p82", "Extra Battery Port 2 Power"),  # Real-time Extra Battery Port 2 (W)
+            self._OutKWattsSensorEntity(client, self, "powGet4p81", "Extra Battery Port 1 Power"),
+            self._OutKWattsSensorEntity(client, self, "powGet4p82", "Extra Battery Port 2 Power"),
 
             # Time & Status - Official field names
             RemainSensorEntity(client, self, "cmsChgRemTime", const.CHARGE_REMAINING_TIME),  # Remaining charging time (min)
@@ -74,7 +139,7 @@ class DeltaPro3(BaseDevice):
 
             # Configuration and limits
             LevelSensorEntity(client, self, "cmsMaxChgSoc", const.MAX_CHARGE_LEVEL, False),  # Charge limit
-            LevelSensorEntity(client, self, "cmsMinDsgSoc", const.MIN_DISCHARGE_LEVEL, False),  # Discharge limit
+            self._LevelKSensorEntity(client, self, "cmsMinDsgSoc", const.MIN_DISCHARGE_LEVEL, False),  # Discharge limit
 
             # Generator control
             LevelSensorEntity(client, self, "cmsOilOnSoc", const.GEN_AUTO_START_LEVEL, False),  # SOC for starting generator
@@ -173,6 +238,10 @@ class DeltaPro3(BaseDevice):
                                     lambda value: {"moduleType": 0, "operateType": "TCP",
                                                    "params": {"cfgDcStandbyTime": value}}),
         ]
+
+    def flat_json(self) -> bool:
+        """Return False so JSONPath expressions can use array indexes like livePower[0]."""
+        return False
 
     def _prepare_data(self, raw_data) -> dict[str, any]:
         """
@@ -379,8 +448,37 @@ class DeltaPro3(BaseDevice):
                             if hasattr(status, 'generatorPvHybridModeSocMax'):
                                 data["params"]["generatorPvHybridModeSocMax"] = status.generatorPvHybridModeSocMax
 
-                            _LOGGER.debug("Delta Pro 3 status parsed successfully using official field names")
-                            
+                            if hasattr(status, 'livePower') and len(status.livePower) > 0:
+                                words = []
+                                for v in status.livePower:
+                                    words.extend((v & 0xFFFF, v >> 16))
+                                data["params"]["livePowerWords"] = words
+
+                                _LOGGER.debug("DP3 livePowerWords first 12: %s", words[:12])
+
+                            if _LOGGER.isEnabledFor(logging.DEBUG):
+                                try:
+                                    from google.protobuf.json_format import MessageToDict
+                                    from google.protobuf import text_format
+                                    _LOGGER.debug("Delta Pro 3 full status (dict) %s", MessageToDict(status, preserving_proto_field_name=True))
+                                    _LOGGER.debug("Delta Pro 3 full status (text)\n%s", text_format.MessageToString(status, print_unknown_fields=True))
+
+                                    # --- debug marker to verify runtime path & unknown-field exposure ---
+                                    _LOGGER.debug("DP3 DEBUG MARKER reached. _unknown_fields present=%s", hasattr(status, "_unknown_fields"))
+
+                                    # Dump using UnknownFields() API (protobuf C-extension)
+                                    try:
+                                        for uf in status.UnknownFields():
+                                            if uf.wire_type == 2:  # length-delimited, usually bytes
+                                                _LOGGER.debug("DP3 unknown(C) tag=%d wt=2 len=%d hex=%s", uf.field_number, len(uf.data), uf.data.hex())
+                                            else:
+                                                _LOGGER.debug("DP3 unknown(C) tag=%d wt=%d value=%s", uf.field_number, uf.wire_type, uf.data)
+                                    except Exception as ce:
+                                        _LOGGER.debug("UnknownFields API not available: %s", ce)
+
+                                except Exception as dump_error:
+                                    _LOGGER.debug("Unable to dump DP3 status: %s", dump_error)
+                                
                         except Exception as e:
                             _LOGGER.error("Delta Pro 3 cmd_id 50 parsing failed: %s", e)
                             data["params"]["parse_error"] = str(e)

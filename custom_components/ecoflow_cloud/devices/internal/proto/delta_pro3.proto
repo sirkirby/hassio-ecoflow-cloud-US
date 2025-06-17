@@ -15,7 +15,7 @@ message DeltaPro3Status {
     optional uint32 cmsMinDsgSoc = 7;               // Discharge limit
     optional uint32 cmsChgDsgState = 8;             // Charging/Discharging status
     optional uint32 cmsBmsRunState = 9;             // On/Off status
-    optional float cmsBattSoc = 10;                 // Overall SOC (float)
+    optional uint32 cmsBattSoc = 10;                // Overall SOC (x1000)
     optional uint32 cmsMaxChgSoc = 11;              // Charge limit
     optional uint32 cmsChgRemTime = 12;             // Remaining charging time (min)
     optional bool cmsOilSelfStart = 13;             // Smart Generator auto start/stop
@@ -27,30 +27,30 @@ message DeltaPro3Status {
     optional uint32 bmsChgRemTime = 17;             // Main battery charging time (min)
     optional uint32 bmsDesignCap = 18;              // Battery capacity (mAh)
     optional uint32 bmsMaxCellTemp = 19;            // Max temperature (°C)
-    optional float bmsBattSoc = 20;                 // Main battery SOC (float)
+    optional uint32 bmsBattSoc = 20;                // Main battery SOC (x1000)
     optional uint32 bmsChgDsgState = 21;            // Main battery charge/discharge status
     optional uint32 bmsMinCellTemp = 22;            // Min temperature (°C)
     optional uint32 bmsDsgRemTime = 23;             // Main battery discharge time (min)
     
     // === CRITICAL POWER FIELDS (Official API) ===
-    optional float powInSumW = 24;                  // Total input power (W) - TARGET: 523W
+    optional uint32 powInSumW = 24;                 // Total input power (x1000 W)
     optional float powOutSumW = 25;                 // Total output power (W) - TARGET: 344W
-    optional float powGetAcHvOut = 26;              // Real-time grid power (W) - AC HV output
-    optional float powGetAc = 27;                   // Real-time AC power (W)
-    optional float powGetTypec1 = 28;               // Real-time Type-C port 1 power (W)
-    optional float powGetTypec2 = 29;               // Real-time Type-C port 2 power (W)
-    optional float powGet12v = 30;                  // Real-time 12V power (W)
-    optional float powGet24v = 31;                  // Real-time 24V power (W)
-    optional float powGetAcLvOut = 32;              // Real-time low-voltage AC output (W)
-    optional float powGet5p8 = 33;                  // Real-time Power In/Out port (W)
-    optional float powGetQcusb1 = 34;               // Real-time USB 1 power (W)
-    optional float powGetQcusb2 = 35;               // Real-time USB 2 power (W)
-    optional float powGet4p81 = 36;                 // Real-time Extra Battery Port 1 (W)
-    optional float powGet4p82 = 37;                 // Real-time Extra Battery Port 2 (W)
-    optional float powGetAcLvTt30Out = 38;          // Real-time LV AC output port (W)
-    optional float powGetPvH = 39;                  // Real-time high-voltage PV (W) - TARGET: 364W
-    optional float powGetAcIn = 40;                 // Real-time AC input power (W)
-    optional float powGetPvL = 41;                  // Real-time low-voltage PV (W) - TARGET: 159W
+    optional uint32 powGetAcHvOut = 26;             // Real-time grid power (x1000 W) - AC HV output
+    optional uint32 powGetAc = 27;                  // Real-time AC power (x1000 W)
+    optional uint32 powGetTypec1 = 28;              // Real-time Type-C port 1 power (x1000 W)
+    optional uint32 powGetTypec2 = 29;              // Real-time Type-C port 2 power (x1000 W)
+    optional uint32 powGet12v = 30;                 // Real-time 12V power (x1000 W)
+    optional uint32 powGet24v = 31;                 // Real-time 24V power (x1000 W)
+    optional uint32 powGetAcLvOut = 32;             // Real-time low-voltage AC output (x1000 W)
+    repeated uint32 livePower = 33 [packed = true];     // Live power channels (0.1 W resolution)
+    optional uint32 powGetQcusb1 = 34;              // Real-time USB 1 power (x1000 W)
+    reserved 35;
+    optional uint32 powGet4p81 = 36;                // Real-time Extra Battery Port 1 (x1000 W)
+    optional uint32 powGet4p82 = 37;                // Real-time Extra Battery Port 2 (x1000 W)
+    optional uint32 powGetAcLvTt30Out = 38;         // Real-time LV AC output port (x1000 W)
+    optional uint32 powGetPvH = 39;                 // Real-time high-voltage PV (x1000 W)
+    optional uint32 powGetAcIn = 40;                // Real-time AC input power (x1000 W)
+    optional uint32 powGetPvL = 41;                 // Real-time low-voltage PV (x1000 W)
     
     // Port connection and configuration info
     optional uint32 plugInInfoAcInChgHalPowMax = 42;    // Max AC charging power
@@ -106,12 +106,12 @@ message DeltaPro3Status {
     optional uint32 flowInfo12v = 86;                   // 12V output switch status
     optional uint32 flowInfo24v = 87;                   // 24V output switch status
     optional uint32 flowInfo4p81In = 88;                // Extra Battery Port 1 input status
-    optional uint32 flowInfoQcusb1 = 89;                // USB 1 output switch status
     optional uint32 flowInfoQcusb2 = 90;                // USB 2 output switch status
     optional uint32 flowInfo4p82In = 91;                // Extra Battery Port 2 input status
     optional uint32 flowInfo5p8In = 92;                 // Power In/Out port switch status
     optional uint32 flowInfo4p81Out = 93;               // Extra Battery Port 1 switch status
     optional uint32 flowInfo5p8Out = 94;                // Power In/Out port switch status
+    optional uint32 flowInfoQcusb1 = 89;                // USB 1 output switch status
     
     // Configuration and settings
     optional bool acEnergySavingOpen = 95;              // AC energy-saving mode
